@@ -3,13 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Auto Frames</title>
+    <title>Shrink frame to content</title>
     <script src="https://miro.com/app/static/sdk/v2/miro.js"></script>
     <script src="index.js" defer></script>
     <style>
       :root {
         color-scheme: light;
         font-family: "Avenir Next", "Segoe UI Variable", sans-serif;
+        --ink: #1f1f1f;
+        --muted: #6b7280;
+        --line: #e6e8eb;
+        --surface: #ffffff;
+        --surface-subtle: #f6f7f9;
       }
 
       body {
@@ -17,52 +22,48 @@
         min-height: 100vh;
         display: grid;
         place-items: center;
-        background:
-          radial-gradient(circle at top left, rgba(255, 179, 107, 0.35), transparent 38%),
-          linear-gradient(180deg, #f9f3ea 0%, #eef4fb 100%);
-        color: #10253f;
+        background: var(--surface-subtle);
+        color: var(--ink);
       }
 
       main {
         width: min(560px, calc(100vw - 40px));
         padding: 32px;
-        border-radius: 28px;
-        background: rgba(255, 255, 255, 0.86);
-        box-shadow: 0 20px 44px rgba(16, 37, 63, 0.12);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: var(--surface);
       }
 
-      .eyebrow {
-        margin: 0 0 10px;
-        font-size: 0.8rem;
+      .label {
+        margin: 0 0 12px;
+        font-size: 0.82rem;
         font-weight: 700;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: #6a7a8c;
+        letter-spacing: -0.01em;
+        color: var(--muted);
       }
 
       h1 {
         margin: 0 0 12px;
-        font-size: clamp(2rem, 4vw, 2.6rem);
-        line-height: 1.05;
+        font-size: clamp(2rem, 4vw, 2.4rem);
+        line-height: 1.08;
       }
 
       p {
         margin: 0;
         font-size: 1rem;
         line-height: 1.6;
+        color: var(--muted);
       }
     </style>
   </head>
   <body>
     <main>
-      <p class="eyebrow">Miro Web SDK app</p>
-      <h1>Auto Frames</h1>
+      <p class="label">Miro Web SDK app</p>
+      <h1>Shrink frame to content</h1>
       <p>
-        This page is the app entrypoint that Miro loads in a headless iframe.
-        Install the app inside Miro to use the panel and automatically shrink
-        selected frames around their contents.
+        Miro loads this page in a background iframe. Install the app inside Miro
+        to open the panel and shrink selected frames around their contents.
       </p>
     </main>
   </body>
 </html>
-

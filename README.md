@@ -1,6 +1,6 @@
-# Auto Frames
+# Shrink frame to content
 
-Auto Frames is a Miro Web SDK app that shrinks selected frames so they tightly fit the items already inside them.
+Shrink frame to content is a Miro Web SDK app that shrinks selected frames so they tightly fit the items already inside them.
 
 It is built as a static instant app, so it only uses the Miro Web SDK and doesn't require OAuth redirect URLs.
 
@@ -28,10 +28,10 @@ It is built as a static instant app, so it only uses the Miro Web SDK and doesn'
    python3 -m http.server 3000 --directory public
    ```
 
-2. In Miro, create a new app named `Auto Frames`.
+2. In Miro, create a new app named `Shrink frame to content`.
 3. Open the app settings, choose **Edit in Manifest**, and paste in [`miro/app-manifest.local.yaml`](/Users/sandervandamme/Documents/GitHub/miro-auto-frames/miro/app-manifest.local.yaml).
 4. Install the app to your developer team.
-5. Open a board, run the app from the toolbar, select one or more frames, and click **Shrink selected frames**.
+5. Open a board, run the app from the toolbar, select one or more frames, and click **Shrink**.
 
 ## Host on GitHub Pages
 

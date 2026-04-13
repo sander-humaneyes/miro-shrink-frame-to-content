@@ -2,6 +2,9 @@
   const DEFAULT_PADDING = 32;
   const MIN_FRAME_SIZE = 100;
   const EPSILON = 0.5;
+  const FIT_RETRY_SAFETY_BUFFERS = [0, 2, 6, 12];
+  const CONTAINMENT_ERROR_FRAGMENT = 'children would exist outside the parent frame';
+  const LOG_PREFIX = 'Shrink frame to content';
 
   function isFiniteNumber(value) {
     return Number.isFinite(value);
@@ -74,7 +77,7 @@
     );
   }
 
-  function createFitPlan(frame, children, padding) {
+  function createFitPlan(frame, children, padding, safetyBuffer) {
     if (!children.length) {
       return {
         reason: 'Empty frame.',
@@ -108,8 +111,9 @@
     }
 
     const mergedBounds = mergeBounds(measurableChildren.map((entry) => entry.bounds));
-    const targetWidth = mergedBounds.right - mergedBounds.left + padding * 2;
-    const targetHeight = mergedBounds.bottom - mergedBounds.top + padding * 2;
+    const effectivePadding = padding + safetyBuffer;
+    const targetWidth = mergedBounds.right - mergedBounds.left + effectivePadding * 2;
+    const targetHeight = mergedBounds.bottom - mergedBounds.top + effectivePadding * 2;
     const newWidth = Math.max(MIN_FRAME_SIZE, targetWidth);
     const newHeight = Math.max(MIN_FRAME_SIZE, targetHeight);
     const extraWidth = newWidth - targetWidth;
@@ -118,8 +122,8 @@
     const originalLeft = frame.x - frame.width / 2;
     const originalTop = frame.y - frame.height / 2;
 
-    const newLeft = originalLeft + mergedBounds.left - padding - extraWidth / 2;
-    const newTop = originalTop + mergedBounds.top - padding - extraHeight / 2;
+    const newLeft = originalLeft + mergedBounds.left - effectivePadding - extraWidth / 2;
+    const newTop = originalTop + mergedBounds.top - effectivePadding - extraHeight / 2;
     const newX = newLeft + newWidth / 2;
     const newY = newTop + newHeight / 2;
     const deltaX = originalLeft - newLeft;
@@ -143,12 +147,72 @@
       childCount: children.length,
       deltaX,
       deltaY,
+      effectivePadding,
       newHeight,
       newWidth,
       newX,
       newY,
+      safetyBuffer,
       status: 'ready',
     };
+  }
+
+  function isContainmentError(error) {
+    const message = error && error.message ? String(error.message).toLowerCase() : '';
+    return message.includes(CONTAINMENT_ERROR_FRAGMENT);
+  }
+
+  async function ensureTemporaryRoom(frame, children, plan) {
+    let requiredWidth = frame.width;
+    let requiredHeight = frame.height;
+
+    if (plan.deltaX <= EPSILON && plan.deltaY <= EPSILON) {
+      return;
+    }
+
+    for (const child of children) {
+      const bounds = getRotatedBounds(child);
+      if (!bounds) {
+        continue;
+      }
+
+      if (plan.deltaX > EPSILON) {
+        requiredWidth = Math.max(requiredWidth, bounds.right + plan.deltaX);
+      }
+
+      if (plan.deltaY > EPSILON) {
+        requiredHeight = Math.max(requiredHeight, bounds.bottom + plan.deltaY);
+      }
+    }
+
+    if (requiredWidth <= frame.width + EPSILON && requiredHeight <= frame.height + EPSILON) {
+      return;
+    }
+
+    const originalLeft = frame.x - frame.width / 2;
+    const originalTop = frame.y - frame.height / 2;
+
+    frame.width = requiredWidth;
+    frame.height = requiredHeight;
+    frame.x = originalLeft + requiredWidth / 2;
+    frame.y = originalTop + requiredHeight / 2;
+    await frame.sync();
+  }
+
+  async function applyFitPlan(frame, children, plan) {
+    await ensureTemporaryRoom(frame, children, plan);
+
+    for (const child of children) {
+      child.x += plan.deltaX;
+      child.y += plan.deltaY;
+      await child.sync();
+    }
+
+    frame.x = plan.newX;
+    frame.y = plan.newY;
+    frame.width = plan.newWidth;
+    frame.height = plan.newHeight;
+    await frame.sync();
   }
 
   async function restoreOriginalState(frame, originalFrame, originalChildren) {
@@ -169,15 +233,15 @@
     const padding = sanitizePadding(options && options.padding);
     const label = frameLabel(frame);
     const children = await frame.getChildren();
-    const plan = createFitPlan(frame, children, padding);
+    const initialPlan = createFitPlan(frame, children, padding, 0);
 
-    if (plan.status === 'skipped' || plan.status === 'noop') {
+    if (initialPlan.status === 'skipped' || initialPlan.status === 'noop') {
       return {
-        childCount: plan.childCount || children.length,
+        childCount: initialPlan.childCount || children.length,
         frameId: frame.id,
         frameLabel: label,
-        message: plan.reason,
-        status: plan.status,
+        message: initialPlan.reason,
+        status: initialPlan.status,
       };
     }
 
@@ -194,45 +258,67 @@
       y: child.y,
     }));
 
-    try {
-      for (const child of children) {
-        child.x += plan.deltaX;
-        child.y += plan.deltaY;
-        await child.sync();
-      }
-
-      frame.x = plan.newX;
-      frame.y = plan.newY;
-      frame.width = plan.newWidth;
-      frame.height = plan.newHeight;
-      await frame.sync();
-
-      return {
-        childCount: plan.childCount,
-        frameId: frame.id,
-        frameLabel: label,
-        message: `${plan.childCount} item${plan.childCount === 1 ? '' : 's'}, ${padding} dp padding.`,
-        padding,
-        status: 'success',
-      };
-    } catch (error) {
-      console.error(`Auto Frames failed to fit ${label}`, error);
+    for (let index = 0; index < FIT_RETRY_SAFETY_BUFFERS.length; index += 1) {
+      const safetyBuffer = FIT_RETRY_SAFETY_BUFFERS[index];
+      const plan = safetyBuffer === 0 ? initialPlan : createFitPlan(frame, children, padding, safetyBuffer);
+      const nextSafetyBuffer = FIT_RETRY_SAFETY_BUFFERS[index + 1];
 
       try {
-        await restoreOriginalState(frame, originalFrame, originalChildren);
-      } catch (rollbackError) {
-        console.error(`Auto Frames failed to roll back ${label}`, rollbackError);
-      }
+        await applyFitPlan(frame, children, plan);
 
-      return {
-        childCount: plan.childCount,
-        error,
-        frameId: frame.id,
-        frameLabel: label,
-        message: error && error.message ? error.message : 'Resize failed.',
-        status: 'error',
-      };
+        return {
+          childCount: plan.childCount,
+          frameId: frame.id,
+          frameLabel: label,
+          message: `${plan.childCount} item${plan.childCount === 1 ? '' : 's'}, minimum ${padding} dp padding.`,
+          padding,
+          status: 'success',
+        };
+      } catch (error) {
+        const shouldRetry = Boolean(nextSafetyBuffer) && isContainmentError(error);
+
+        try {
+          await restoreOriginalState(frame, originalFrame, originalChildren);
+        } catch (rollbackError) {
+          console.error(`${LOG_PREFIX} failed to roll back ${label}`, rollbackError);
+          return {
+            childCount: plan.childCount,
+            error,
+            frameId: frame.id,
+            frameLabel: label,
+            message: error && error.message ? error.message : 'Resize failed.',
+            status: 'error',
+          };
+        }
+
+        if (shouldRetry) {
+          console.warn(
+            `${LOG_PREFIX} is retrying ${label} with an extra ${nextSafetyBuffer} dp safety buffer.`,
+            error,
+          );
+          continue;
+        }
+
+        console.error(`${LOG_PREFIX} failed to fit ${label}`, error);
+
+        return {
+          childCount: plan.childCount,
+          error,
+          frameId: frame.id,
+          frameLabel: label,
+          message: error && error.message ? error.message : 'Resize failed.',
+          status: 'error',
+        };
+      }
     }
+
+    return {
+      childCount: initialPlan.childCount,
+      frameId: frame.id,
+      frameLabel: label,
+      message: 'Resize failed.',
+      status: 'error',
+    };
   }
 
   async function fitSelectedFrames(options) {

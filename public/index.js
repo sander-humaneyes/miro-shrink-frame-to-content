@@ -1,4 +1,5 @@
 (function () {
+  const APP_NAME = 'Shrink frame to content';
   const PANEL_URL = new URL('./panel.html', window.location.href).toString();
 
   function hasMiroContext() {
@@ -9,7 +10,7 @@
     try {
       await miro.board.notifications.showError(message);
     } catch (notificationError) {
-      console.error('Auto Frames notification failed', notificationError);
+      console.error(`${APP_NAME} notification failed`, notificationError);
     }
   }
 
@@ -17,7 +18,7 @@
     const canOpenPanel = await miro.board.ui.canOpenPanel();
 
     if (!canOpenPanel) {
-      await miro.board.notifications.showInfo('Close the current panel before opening Auto Frames.');
+      await miro.board.notifications.showInfo('Close the current panel before opening this app.');
       return;
     }
 
@@ -35,14 +36,14 @@
       try {
         await openPanel();
       } catch (error) {
-        console.error('Auto Frames failed to open its panel', error);
-        await showError('Auto Frames could not open its panel.');
+        console.error(`${APP_NAME} failed to open its panel`, error);
+        await showError('Could not open the panel.');
       }
     });
   }
 
   init().catch(async (error) => {
-    console.error('Auto Frames failed to initialize', error);
-    await showError('Auto Frames failed to initialize.');
+    console.error(`${APP_NAME} failed to initialize`, error);
+    await showError('The app failed to initialize.');
   });
 })();
