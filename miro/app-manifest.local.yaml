@@ -10,15 +10,15 @@ scopes:
 icons:
   colored: >-
     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
-    fill="none" stroke="currentColor" stroke-width="1.8"
-    stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5"
-    width="17" height="17" rx="3"/><path d="M9.5 8.5 6.5 11.5 9.5
-    14.5"/><path d="M14.5 8.5 17.5 11.5 14.5 14.5"/></svg>
-  outline: >-
-    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
     fill="none"><rect x="1.5" y="1.5" width="21" height="21" rx="6"
     fill="#10253F"/><rect x="5" y="5" width="14" height="14" rx="3"
     fill="#FFB36B"/><path d="M10 8.75 7.25 11.5 10 14.25" stroke="#10253F"
     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path
     d="M14 8.75 16.75 11.5 14 14.25" stroke="#10253F" stroke-width="1.8"
     stroke-linecap="round" stroke-linejoin="round"/></svg>
+  outline: >-
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
+    fill="none" stroke="currentColor" stroke-width="1.8"
+    stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5"
+    width="17" height="17" rx="3"/><path d="M9.5 8.5 6.5 11.5 9.5
+    14.5"/><path d="M14.5 8.5 17.5 11.5 14.5 14.5"/></svg>
